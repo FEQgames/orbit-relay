@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>FEQ Games Arcade</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(1200px 800px at 50% -10%, #1b2a52 0%, #0b1020 60%, #060a16 100%);
+      color: #f2f5ff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 48px 20px 64px;
+    }
+    .logo {
+      font-size: clamp(40px, 8vw, 72px);
+      font-weight: 900; letter-spacing: 4px;
+      background: linear-gradient(180deg, #ff5d7e, #ff2d55 45%, #b3123f);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 22px rgba(255,45,85,.55));
+      text-align: center;
+    }
+    .tag { margin-top: 10px; color: #9fb2d8; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 300px));
+      gap: 22px; margin-top: 44px; justify-content: center; width: 100%; max-width: 680px;
+    }
+    .card {
+      display: block; text-decoration: none; color: inherit;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px; padding: 28px 24px;
+      transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+    .card:hover { transform: translateY(-4px); border-color: #ff2d55; box-shadow: 0 12px 40px rgba(255,45,85,.25); }
+    .card .emoji { font-size: 44px; }
+    .card h2 { margin: 12px 0 8px; font-size: 24px; }
+    .card p { color: #9fb2d8; font-size: 14px; line-height: 1.5; }
+    .card .play {
+      display: inline-block; margin-top: 16px; padding: 10px 22px;
+      background: #ff2d55; color: #fff; font-weight: 700; border-radius: 999px; font-size: 14px;
+    }
+    footer { margin-top: 56px; color: #5b6b8c; font-size: 12px; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+  <div class="logo">FEQ GAMES</div>
+  <div class="tag">Arcade</div>
+  <div class="grid">
+    <a class="card" href="./">
+      <div class="emoji">🛰️</div>
+      <h2>Orbit Relay</h2>
+      <p>One-tap timing arcade. Jump the spark through shrinking orbit gates before the 30-second clock runs out.</p>
+      <span class="play">Play</span>
+    </a>
+    <a class="card" href="https://feqgames.github.io/sock-toss/">
+      <div class="emoji">🧦</div>
+      <h2>Sock Toss</h2>
+      <p>Laundry-room toss. Fling socks at the targets while the red cat judges your aim.</p>
+      <span class="play">Play</span>
+    </a>
+  </div>
+  <footer>FEQ GAMES · FRANKLINQUALLS.COM</footer>
+</body>
+</html>
