@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Righteous&display=swap" rel="stylesheet">
+  <title>Orbit Relay</title>
+  <style>
+    :root {
+      --ink: #eff7ff;
+      --muted: #95aac1;
+      --cyan: #28e8d1;
+      --cyan-hot: #b8fff6;
+      --coral: #ff6b62;
+      --gold: #ffd166;
+      --navy: #07111f;
+      --panel: #0d1b2d;
+      --line: rgba(171, 215, 255, .16);
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background: var(--navy);
+      font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    button { font: inherit; }
+    .app {
+      position: relative;
+      width: 100%;
+      max-width: 100vw;
+      min-width: 0;
+      min-height: 100svh;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr auto;
+      isolation: isolate;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(40, 232, 209, .07), transparent 34%),
+        linear-gradient(180deg, #07111f 0%, #091629 100%);
+    }
+    .app::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: .18;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+    .hud {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      width: min(920px, 100%);
+      max-width: 100vw;
+      min-width: 0;
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) clamp(16px, 4vw, 36px) 8px;
+      min-height: 74px;
+    }
+    .metric { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+    .metric:last-child { text-align: right; }
+    .label {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .value {
+      font-family: "Righteous", system-ui, sans-serif;
+      font-size: clamp(24px, 5vw, 34px);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 58px;
+      aspect-ratio: 1;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: rgba(7, 17, 31, .72);
+      box-shadow: inset 0 0 18px rgba(40,232,209,.05);
+    }
+    .timer::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 2px solid var(--cyan);
+      border-left-color: transparent;
+      border-radius: 50%;
+      transform: rotate(var(--timer-turn, 0deg));
+      transition: transform .2s linear;
+    }
+    .timer span { font-weight: 500; font-size: 15px; }
+    .stage-wrap {
+      position: relative;
+      width: min(880px, 100%);
+      max-width: 100vw;
+      min-width: 0;
+      min-height: 0;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      padding: 0 12px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      height: 100%;
+      max-height: 680px;
+      touch-action: manipulation;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at center, rgba(7,17,31,.7), rgba(7,17,31,.2) 58%, transparent);
+      transition: opacity .18s ease, visibility .18s ease;
+    }
+    .overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .card {
+      width: min(430px, 100%);
+      padding: clamp(24px, 5vw, 38px);
+      text-align: center;
+      background: rgba(8, 20, 35, .94);
+      border: 1px solid rgba(151, 222, 240, .18);
+      border-radius: 26px 8px 26px 8px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+    }
+    .orbit-mark {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      border: 1px solid rgba(40,232,209,.28);
+      border-radius: 50%;
+      position: relative;
+    }
+    .orbit-mark::before,
+    .orbit-mark::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+    }
+    .orbit-mark::before { inset: 13px; border: 1px solid rgba(40,232,209,.46); }
+    .orbit-mark::after {
+      width: 11px;
+      height: 11px;
+      right: 3px;
+      top: 26px;
+      background: var(--cyan);
+      box-shadow: 0 0 18px var(--cyan);
+    }
+    .studio {
+      margin: 0 0 9px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-family: "Righteous", system-ui, sans-serif;
+      font-size: clamp(35px, 9vw, 56px);
+      font-weight: 400;
+      letter-spacing: .02em;
+      line-height: .95;
+    }
+    .tagline { margin: 14px auto 22px; max-width: 32ch; color: #b7c9d9; font-size: 13px; line-height: 1.65; }
+    .how {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 24px;
+      color: var(--cyan-hot);
+      font-size: 11px;
+    }
+    .mini-gate { width: 28px; height: 10px; border: 2px solid var(--cyan); border-left: 0; border-right: 0; }
+    .primary {
+      border: 0;
+      min-width: 175px;
+      padding: 14px 22px;
+      border-radius: 7px 18px 7px 18px;
+      color: #031712;
+      background: var(--cyan);
+      font-family: "Righteous", system-ui, sans-serif;
+      font-size: 17px;
+      letter-spacing: .04em;
+      cursor: pointer;
+      box-shadow: 0 7px 0 #0a7f75, 0 14px 28px rgba(40,232,209,.18);
+      transition: transform .08s ease, box-shadow .08s ease;
+    }
+    .primary:active { transform: translateY(5px); box-shadow: 0 2px 0 #0a7f75; }
+    .result { display: none; }
+    .result.show { display: block; }
+    .intro.hide { display: none; }
+    .result-kicker { margin: 0 0 6px; color: var(--gold); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+    .result-score { margin: 0 0 6px; font-family: "Righteous", sans-serif; font-size: 64px; line-height: 1; }
+    .result-copy { margin: 0 0 24px; color: var(--muted); font-size: 12px; }
+    .footer {
+      width: min(920px, 100%);
+      max-width: 100vw;
+      min-width: 0;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      padding: 8px clamp(16px, 4vw, 36px) max(18px, env(safe-area-inset-bottom));
+    }
+    .lives { display: flex; gap: 7px; align-items: center; }
+    .life {
+      width: 14px;
+      height: 14px;
+      transform: rotate(45deg);
+      border-radius: 2px 7px 2px 7px;
+      background: var(--coral);
+      box-shadow: 0 0 12px rgba(255,107,98,.35);
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    .life.lost { opacity: .16; transform: rotate(45deg) scale(.7); box-shadow: none; }
+    .tap {
+      width: clamp(96px, 28vw, 150px);
+      height: 52px;
+      border: 1px solid rgba(40,232,209,.55);
+      border-radius: 9px 22px 9px 22px;
+      color: var(--cyan-hot);
+      background: rgba(40,232,209,.08);
+      font-family: "Righteous", sans-serif;
+      font-size: 16px;
+      letter-spacing: .08em;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .tap:active { background: rgba(40,232,209,.19); transform: translateY(2px); }
+    .sound-wrap { display: flex; justify-content: flex-end; }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--muted);
+      background: rgba(7,17,31,.55);
+      cursor: pointer;
+    }
+    .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .status {
+      position: absolute;
+      left: 50%;
+      top: 53%;
+      transform: translate(-50%, -50%) scale(.9);
+      font-family: "Righteous", sans-serif;
+      font-size: clamp(24px, 6vw, 46px);
+      letter-spacing: .04em;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      white-space: nowrap;
+    }
+    .status.pop { animation: status-pop .62s ease-out; }
+    .status.good { color: var(--cyan-hot); text-shadow: 0 0 22px rgba(40,232,209,.45); }
+    .status.bad { color: #ff9d96; }
+    @keyframes status-pop {
+      0% { opacity: 0; transform: translate(-50%, -40%) scale(.75); }
+      20% { opacity: 1; transform: translate(-50%, -52%) scale(1); }
+      72% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, -70%) scale(1.04); }
+    }
+    .flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: rgba(255,107,98,.12); }
+    .flash.hit { animation: flash .28s ease; }
+    @keyframes flash { 40% { opacity: 1; } }
+    @media (min-width: 720px) {
+      .app { min-height: 720px; }
+      .footer { padding-bottom: 24px; }
+    }
+    @media (max-height: 660px) {
+      .hud { min-height: 60px; padding-top: max(8px, env(safe-area-inset-top)); }
+      .timer { width: 48px; }
+      .footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+      .card { padding: 20px; }
+      .orbit-mark { width: 54px; height: 54px; margin-bottom: 12px; }
+      .orbit-mark::before { inset: 10px; }
+      .orbit-mark::after { top: 20px; width: 9px; height: 9px; }
+      .tagline { margin: 10px auto 14px; }
+      .how { margin-bottom: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="hud" aria-label="Game score">
+      <div class="metric">
+        <span class="label">score</span>
+        <span class="value" id="score">00</span>
+      </div>
+      <div class="timer" id="timerRing" aria-label="Time remaining"><span id="time">30</span></div>
+      <div class="metric">
+        <span class="label">chain</span>
+        <span class="value" id="chain">×1</span>
+      </div>
+    </header>
+
+    <section class="stage-wrap" id="stageWrap" aria-label="Orbit Relay game area">
+      <canvas id="gameCanvas"></canvas>
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <div class="intro" id="intro">
+            <div class="orbit-mark" aria-hidden="true"></div>
+            <p class="studio">FEQ Games presents</p>
+            <h1>Orbit Relay</h1>
+            <p class="tagline">Catch the glowing gate as your spark races around the rings. Each clean jump tightens the orbit.</p>
+            <p class="how"><span class="mini-gate" aria-hidden="true"></span> Tap inside the green lane</p>
+            <button class="primary" id="startBtn">Start run</button>
+          </div>
+          <div class="result" id="result">
+            <p class="result-kicker" id="resultKicker">Run complete</p>
+            <p class="result-score" id="finalScore">0</p>
+            <p class="result-copy" id="resultCopy">Best chain ×1</p>
+            <button class="primary" id="againBtn">Run it back</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="lives" aria-label="Three lives" id="lives">
+        <span class="life"></span><span class="life"></span><span class="life"></span>
+      </div>
+      <button class="tap" id="tapBtn" aria-label="Jump when the spark reaches the glowing gate">JUMP</button>
+      <div class="sound-wrap">
+        <button class="icon-btn" id="soundBtn" aria-label="Mute sound" title="Sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.7 8.5H3.5v7h3.2L11 19z"/><path class="waves" d="M15 9.5a4 4 0 0 1 0 5M18 7a7.3 7.3 0 0 1 0 10"/></svg>
+        </button>
+      </div>
+    </footer>
+    <div class="flash" id="flash"></div>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const wrap = document.getElementById('stageWrap');
+      const overlay = document.getElementById('overlay');
+      const intro = document.getElementById('intro');
+      const result = document.getElementById('result');
+      const scoreEl = document.getElementById('score');
+      const chainEl = document.getElementById('chain');
+      const timeEl = document.getElementById('time');
+      const timerRing = document.getElementById('timerRing');
+      const statusEl = document.getElementById('status');
+      const flash = document.getElementById('flash');
+      const tapBtn = document.getElementById('tapBtn');
+      const soundBtn = document.getElementById('soundBtn');
+      const livesEls = [...document.querySelectorAll('.life')];
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      let W = 600, H = 600, cx = 300, cy = 300, maxR = 220;
+      let running = false, last = 0, timeLeft = 30, score = 0, chain = 1, bestChain = 1, lives = 3;
+      let ring = 0, angle = -Math.PI / 2, direction = 1, speed = 1.85, gateAngle = 0, gateWidth = .7;
+      let particles = [], shake = 0, pulse = 0, sessionBest = 0, audioCtx = null, muted = false;
+      const ringCount = 5;
+
+      function resize() {
+        const r = wrap.getBoundingClientRect();
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.max(1, Math.round(r.width * dpr));
+        canvas.height = Math.max(1, Math.round(r.height * dpr));
+        canvas.style.width = r.width + 'px';
+        canvas.style.height = r.height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        W = r.width; H = r.height;
+        cx = W / 2; cy = H / 2;
+        maxR = Math.max(92, Math.min(W, H) * .405);
+      }
+
+      function radiusFor(i) {
+        const inner = maxR * .3;
+        return inner + (maxR - inner) * (i / (ringCount - 1));
+      }
+
+      function norm(a) {
+        a %= Math.PI * 2;
+        return a < 0 ? a + Math.PI * 2 : a;
+      }
+      function diff(a, b) {
+        let d = Math.abs(norm(a) - norm(b));
+        return Math.min(d, Math.PI * 2 - d);
+      }
+      function randomGate() {
+        let next;
+        do { next = Math.random() * Math.PI * 2; } while (diff(next, angle) < .85);
+        gateAngle = next;
+        gateWidth = Math.max(.23, .72 - score * .012);
+      }
+
+      function updateHud() {
+        scoreEl.textContent = String(score).padStart(2, '0');
+        chainEl.textContent = '×' + chain;
+        timeEl.textContent = Math.max(0, Math.ceil(timeLeft));
+        timerRing.style.setProperty('--timer-turn', `${(1 - timeLeft / 30) * 360}deg`);
+        livesEls.forEach((el, i) => el.classList.toggle('lost', i >= lives));
+      }
+
+      function tone(freq, duration, type = 'sine', volume = .04, delay = 0) {
+        if (muted) return;
+        try {
+          audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = type; o.frequency.value = freq;
+          g.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+          g.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + delay + .01);
+          g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + delay + duration);
+          o.connect(g).connect(audioCtx.destination);
+          o.start(audioCtx.currentTime + delay);
+          o.stop(audioCtx.currentTime + delay + duration + .02);
+        } catch (_) {}
+      }
+
+      function say(text, good) {
+        statusEl.textContent = text;
+        statusEl.className = `status ${good ? 'good' : 'bad'}`;
+        void statusEl.offsetWidth;
+        statusEl.classList.add('pop');
+      }
+
+      function burst(color, count = 18) {
+        if (reducedMotion) return;
+        const r = radiusFor(ring);
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        for (let i = 0; i < count; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const v = 30 + Math.random() * 100;
+          particles.push({x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, life: .55 + Math.random()*.35, max: .9, color});
+        }
+      }
+
+      function jump() {
+        if (!running) return;
+        const d = diff(angle, gateAngle);
+        if (d <= gateWidth / 2) {
+          const perfect = d < gateWidth * .16;
+          score += perfect ? 2 * chain : chain;
+          chain = Math.min(9, chain + (perfect ? 1 : 0));
+          bestChain = Math.max(bestChain, chain);
+          timeLeft = Math.min(30, timeLeft + (perfect ? 1.15 : .45));
+          burst(perfect ? '#ffd166' : '#28e8d1', perfect ? 28 : 15);
+          say(perfect ? 'PERFECT +2' : 'CLEAN', true);
+          tone(perfect ? 760 : 590, .13, 'sine', .05);
+          tone(perfect ? 1020 : 770, .16, 'sine', .035, .07);
+          ring++;
+          pulse = 1;
+          if (ring >= ringCount) {
+            score += 5 * chain;
+            ring = 0;
+            speed = Math.min(4.5, speed + .16);
+            direction *= -1;
+            say('RELAY +'+(5*chain), true);
+            burst('#ffd166', 38);
+          }
+          randomGate();
+        } else {
+          lives--;
+          chain = 1;
+          shake = reducedMotion ? 0 : 9;
+          say('MISSED', false);
+          tone(120, .22, 'sawtooth', .035);
+          flash.classList.remove('hit'); void flash.offsetWidth; flash.classList.add('hit');
+          randomGate();
+          if (lives <= 0) endGame('Out of sparks');
+        }
+        updateHud();
+      }
+
+      function startGame() {
+        running = true; last = performance.now(); timeLeft = 30; score = 0; chain = 1; bestChain = 1; lives = 3;
+        ring = 0; angle = -Math.PI/2; direction = Math.random() > .5 ? 1 : -1; speed = 1.85;
+        particles = []; randomGate(); updateHud();
+        overlay.classList.add('hidden'); intro.classList.remove('hide'); result.classList.remove('show');
+        tone(420, .12, 'sine', .04); tone(650, .16, 'sine', .04, .1);
+      }
+
+      function endGame(reason) {
+        if (!running) return;
+        running = false;
+        sessionBest = Math.max(sessionBest, score);
+        document.getElementById('resultKicker').textContent = reason;
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('resultCopy').textContent = `Best chain ×${bestChain}${sessionBest === score && score > 0 ? ' · session best' : ''}`;
+        intro.classList.add('hide'); result.classList.add('show'); overlay.classList.remove('hidden');
+        tone(300, .14, 'triangle', .04); tone(220, .26, 'triangle', .03, .12);
+      }
+
+      function draw(t, dt) {
+        ctx.clearRect(0,0,W,H);
+        const sx = shake ? (Math.random()-.5)*shake : 0;
+        const sy = shake ? (Math.random()-.5)*shake : 0;
+        shake *= .84;
+        ctx.save(); ctx.translate(sx, sy);
+
+        // star field
+        ctx.fillStyle = 'rgba(157,204,237,.17)';
+        for (let i=0;i<30;i++) {
+          const x = (i*137.5 % W + Math.sin(i*11)*16 + W) % W;
+          const y = (i*83.7 % H + Math.cos(i*7)*11 + H) % H;
+          ctx.fillRect(x,y,i%5===0?1.5:1,i%5===0?1.5:1);
+        }
+
+        // central pulse
+        const core = ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*.28);
+        core.addColorStop(0, `rgba(40,232,209,${.11 + pulse*.1})`);
+        core.addColorStop(1,'rgba(40,232,209,0)');
+        ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx,cy,maxR*.3,0,Math.PI*2); ctx.fill();
+        pulse *= .93;
+
+        for (let i=0;i<ringCount;i++) {
+          const r = radiusFor(i);
+          ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+          ctx.strokeStyle = i === ring ? 'rgba(168,220,241,.34)' : 'rgba(168,220,241,.12)';
+          ctx.lineWidth = i === ring ? 1.6 : 1;
+          ctx.stroke();
+          // orbit ticks
+          for (let k=0;k<12;k++) {
+            const a = k/12*Math.PI*2;
+            ctx.beginPath();
+            ctx.moveTo(cx+Math.cos(a)*(r-2),cy+Math.sin(a)*(r-2));
+            ctx.lineTo(cx+Math.cos(a)*(r+2),cy+Math.sin(a)*(r+2));
+            ctx.strokeStyle = 'rgba(168,220,241,.09)'; ctx.lineWidth=1; ctx.stroke();
+          }
+        }
+
+        // active gate
+        const gr = radiusFor(ring);
+        ctx.beginPath(); ctx.arc(cx,cy,gr,gateAngle-gateWidth/2,gateAngle+gateWidth/2);
+        ctx.strokeStyle = '#28e8d1'; ctx.lineWidth = 9; ctx.lineCap='round';
+        ctx.shadowBlur = 20; ctx.shadowColor='#28e8d1'; ctx.stroke(); ctx.shadowBlur=0;
+        // perfect center marker
+        ctx.beginPath(); ctx.arc(cx,cy,gr,gateAngle-gateWidth*.14,gateAngle+gateWidth*.14);
+        ctx.strokeStyle = '#d5fff9'; ctx.lineWidth = 3; ctx.stroke();
+
+        // moving spark
+        const pr = radiusFor(ring);
+        const px = cx + Math.cos(angle)*pr, py = cy + Math.sin(angle)*pr;
+        ctx.beginPath(); ctx.arc(px,py,8,0,Math.PI*2);
+        ctx.fillStyle='#f5fbff'; ctx.shadowBlur=22; ctx.shadowColor='#8ddfff'; ctx.fill(); ctx.shadowBlur=0;
+        ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fillStyle='#28e8d1'; ctx.fill();
+
+        // direction trail
+        ctx.beginPath();
+        ctx.arc(cx,cy,pr,angle-direction*.32,angle);
+        const trail = ctx.createLinearGradient(px-25,py-25,px+25,py+25);
+        trail.addColorStop(0,'rgba(40,232,209,0)'); trail.addColorStop(1,'rgba(40,232,209,.55)');
+        ctx.strokeStyle=trail; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke();
+
+        particles = particles.filter(p=>p.life>0);
+        particles.forEach(p=>{
+          p.x += p.vx*dt; p.y += p.vy*dt; p.vx*=.97; p.vy*=.97; p.life-=dt;
+          ctx.globalAlpha = Math.max(0,p.life/p.max); ctx.fillStyle=p.color;
+          ctx.fillRect(p.x,p.y,3,3);
+        });
+        ctx.globalAlpha=1;
+        ctx.restore();
+      }
+
+      function loop(now) {
+        const dt = Math.min(.033, (now-last)/1000 || 0); last = now;
+        if (running) {
+          angle = norm(angle + direction * speed * dt);
+          timeLeft -= dt;
+          if (timeLeft <= 0) { timeLeft = 0; updateHud(); endGame('Time up'); }
+          else if (Math.floor(timeLeft*10)%2===0) updateHud();
+        }
+        draw(now/1000, dt);
+        requestAnimationFrame(loop);
+      }
+
+      document.getElementById('startBtn').addEventListener('click', startGame);
+      document.getElementById('againBtn').addEventListener('click', startGame);
+      tapBtn.addEventListener('click', jump);
+      canvas.addEventListener('pointerdown', e => { e.preventDefault(); jump(); });
+      document.addEventListener('keydown', e => {
+        if (e.code === 'Space' || e.code === 'Enter') {
+          if (e.target.tagName === 'BUTTON') return;
+          e.preventDefault(); running ? jump() : startGame();
+        }
+      });
+      soundBtn.addEventListener('click', () => {
+        muted = !muted;
+        soundBtn.setAttribute('aria-label', muted ? 'Turn sound on' : 'Mute sound');
+        soundBtn.querySelector('.waves').style.display = muted ? 'none' : '';
+        if (!muted) tone(520,.1,'sine',.04);
+      });
+      document.addEventListener('visibilitychange', () => { if (document.hidden && running) last = performance.now(); });
+      new ResizeObserver(resize).observe(wrap);
+      resize(); updateHud(); requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

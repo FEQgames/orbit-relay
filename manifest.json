@@ -1,0 +1,23 @@
+{
+  "background_color": "#07111f",
+  "description": "A one-tap timing arcade game from FEQ Games. Jump the spark through shrinking orbit gates before the 30-second clock runs out.",
+  "display": "fullscreen",
+  "icons": [
+    {
+      "sizes": "192x192",
+      "src": "icon-192.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any maskable",
+      "sizes": "512x512",
+      "src": "icon-512.png",
+      "type": "image/png"
+    }
+  ],
+  "name": "Orbit Relay",
+  "orientation": "portrait",
+  "short_name": "Orbit Relay",
+  "start_url": ".",
+  "theme_color": "#07111f"
+}
